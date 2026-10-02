@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>リズム・メトロノーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e8ebe3; --panel:#f8f9f4; --ink:#15171c; --sub:#5a5f66; --line:#c9cec4;
+  --cobalt:#2f4bff; --cobalt-ink:#ffffff; --hit:#ffd23f; --rest:#b4baaf; --soft:#dfe4ff;
+  --c1:#f2384a; --c2:#ff8a00; --c3:#16a565; --c4:#0097c2; --c5:#3d55f5; --c6:#a33fe0;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121419; --panel:#1b1e25; --ink:#eef0f5; --sub:#a2a8b2; --line:#2f333d;
+    --cobalt:#7a90ff; --cobalt-ink:#0d0f14; --hit:#ffd23f; --rest:#454a55; --soft:#252b45;
+    --c1:#ff6b7a; --c2:#ffa640; --c3:#3fd18a; --c4:#36c8ea; --c5:#8197ff; --c6:#c584ff;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121419; --panel:#1b1e25; --ink:#eef0f5; --sub:#a2a8b2; --line:#2f333d;
+  --cobalt:#7a90ff; --cobalt-ink:#0d0f14; --hit:#ffd23f; --rest:#454a55; --soft:#252b45;
+    --c1:#ff6b7a; --c2:#ffa640; --c3:#3fd18a; --c4:#36c8ea; --c5:#8197ff; --c6:#c584ff;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif;
+  font-size:17px;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px 130px}
+h1{font-size:1.05rem;font-weight:900;margin:4px 2px 14px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+
+/* はやさ */
+.tempo{background:var(--panel);border:1px solid var(--line);border-top:6px solid var(--c5);border-radius:24px;padding:16px;display:grid;gap:12px}
+.tlabel{font-weight:700;color:var(--sub);font-size:.95rem;text-align:center}
+.bpmrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.step{width:60px;height:60px;border-radius:50%;border:2px solid var(--line);background:transparent;font-size:1.8rem;font-weight:700;flex:none;user-select:none;-webkit-user-select:none}
+.step:active{background:var(--soft)}
+.bpmbox{flex:1;min-width:0;text-align:center}
+#bpmIn{display:block;margin:0 auto;width:100%;max-width:6ch;border:none;border-bottom:3px dashed var(--line);background:transparent;text-align:center;
+  font-family:"Space Grotesk",system-ui,sans-serif;font-weight:700;font-size:clamp(3.4rem,16vw,5rem);line-height:1.05;letter-spacing:-.03em;padding:0;
+  -moz-appearance:textfield;appearance:textfield}
+#bpmIn::-webkit-outer-spin-button,#bpmIn::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#bpmIn:focus{outline:none;border-bottom-color:var(--cobalt)}
+.word{display:inline-block;margin-top:8px;font-weight:700;font-size:1rem;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--wc,var(--cobalt)) 18%,transparent);color:var(--ink)}
+.hint{font-size:.8rem;color:var(--sub);margin-top:2px}
+input[type=range]{width:100%;accent-color:var(--cobalt);height:32px}
+.tap{height:60px;border-radius:18px;border:2px solid var(--line);background:transparent;font-weight:900;font-size:1.05rem}
+.tap small{display:block;font-weight:500;font-size:.75rem;color:var(--sub)}
+.tap.flash{background:var(--c2);border-color:var(--c2);color:var(--cobalt-ink)}
+
+/* こうせい */
+.secthead{display:flex;align-items:center;justify-content:space-between;margin:24px 2px 10px;gap:8px}
+.secthead h2{font-size:1.1rem;margin:0;font-weight:900}
+.counter{display:flex;align-items:center;gap:6px}
+.counter button{width:44px;height:44px;border-radius:12px;border:2px solid var(--line);background:var(--panel);font-size:1.3rem;font-weight:700}
+.counter span{min-width:3em;text-align:center;font-weight:900}
+.score{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:8px 6px;margin-bottom:10px}
+.score svg{display:block;width:100%;height:84px;color:var(--ink)}
+.score .bh{transition:opacity .08s}
+.score .bh{opacity:0}
+.score .bh.cur{opacity:.22}
+.acc{stroke:var(--bc,var(--cobalt))}
+.legend{font-size:.85rem;color:var(--sub);margin:0 2px 10px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.legend i{display:inline-block;width:15px;height:15px;border-radius:50%;vertical-align:-2px;margin-right:4px}
+
+.beats{display:grid;gap:12px}
+.beat{--bc:var(--cobalt);background:var(--panel);border:2px solid color-mix(in srgb,var(--bc) 35%,var(--line));border-radius:20px;padding:12px;display:grid;gap:8px}
+.beat.cur{border-color:var(--bc);box-shadow:0 0 0 3px color-mix(in srgb,var(--bc) 25%,transparent)}
+.btop{display:flex;align-items:center;gap:10px}
+.bnum{width:40px;height:40px;border-radius:50%;background:var(--bc);color:var(--cobalt-ink);display:grid;place-items:center;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:1.2rem;flex:none}
+.pick{flex:1;min-width:0;height:48px;border-radius:14px;border:2px solid var(--bc);background:color-mix(in srgb,var(--bc) 13%,var(--panel));font-weight:900;font-size:1.1rem;
+  display:flex;align-items:center;justify-content:space-between;padding:0 14px;text-align:left}
+.pick span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick small{font-weight:700;font-size:.8rem;color:var(--bc);flex:none;margin-left:8px}
+.nota{display:block;width:100%;height:76px;color:var(--ink);overflow:visible}
+
+.slots{display:flex;gap:6px;height:60px}
+.slot{flex:1;border:none;border-radius:14px;background:transparent;display:grid;place-items:center;padding:0}
+.slot::after{content:"";width:min(42px,80%);aspect-ratio:1;border-radius:50%;transition:transform .06s}
+.slot.s2::after{background:var(--bc)}
+.slot.s1::after{border:4px solid var(--bc);width:min(32px,70%)}
+.slot.s0::after{width:12px;background:var(--rest)}
+.slot.hold::after{width:86%;height:6px;aspect-ratio:auto;border-radius:3px;background:var(--bc);opacity:.5}
+.slot.now{background:color-mix(in srgb,var(--bc) 24%,transparent)}
+.slot.now::after{transform:scale(1.08)}
+.slot.s0.now,.slot.hold.now{background:color-mix(in srgb,var(--bc) 14%,transparent)}
+
+/* おきにいり */
+.saved{margin-top:26px;background:var(--panel);border:1px solid var(--line);border-top:6px solid var(--c3);border-radius:20px;padding:14px}
+.saved h2{font-size:1.1rem;margin:0 0 10px;font-weight:900}
+.saverow{display:flex;gap:8px}
+.saverow input{flex:1;min-width:0;height:48px;border-radius:14px;border:2px solid var(--line);background:var(--bg);padding:0 12px}
+.btn{height:48px;border-radius:14px;border:2px solid var(--line);background:transparent;font-weight:700;padding:0 14px}
+.btn.blue{background:var(--c3);border-color:var(--c3);color:var(--cobalt-ink)}
+.list{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.list li{display:flex;gap:8px;align-items:center}
+.list .load{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list .load em{font-style:normal;color:var(--sub);font-size:.8rem;margin-left:6px}
+.empty{color:var(--sub);font-size:.9rem;margin:10px 0 0}
+.note{color:var(--sub);font-size:.82rem;margin-top:18px;line-height:1.8}
+
+/* したの バー */
+.dock{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);z-index:5}
+.dock .in{max-width:720px;margin:0 auto;display:flex;gap:10px}
+.vol{width:96px;height:64px;border-radius:20px;border:2px solid var(--line);background:var(--panel);font-weight:700;font-size:.9rem;line-height:1.2}
+.play{flex:1;height:64px;border-radius:20px;border:none;background:var(--cobalt);color:var(--cobalt-ink);font-weight:900;font-size:1.35rem}
+.play.on{background:var(--c1);color:var(--cobalt-ink)}
+
+/* えらぶ がめん */
+.sheet{position:fixed;inset:0;z-index:10;display:none}
+.sheet.open{display:block}
+.scrim{position:absolute;inset:0;background:rgba(10,12,18,.45)}
+.panel{position:absolute;left:0;right:0;bottom:0;max-height:88%;overflow:auto;background:var(--panel);border-radius:26px 26px 0 0;
+  padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));max-width:720px;margin:0 auto}
+.phead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px}
+.phead h3{margin:0;font-size:1.15rem;font-weight:900}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gh{--gc:var(--cobalt);grid-column:1/-1;margin:10px 2px 0;font-size:.9rem;color:var(--sub);font-weight:700}
+.gh:first-child{margin-top:0}
+.tile{border:2px solid var(--line);border-radius:16px;background:var(--bg);padding:6px 4px 8px;display:grid;justify-items:center;gap:2px}
+.tile svg{width:100%;height:62px;color:var(--ink)}
+.tile b{font-size:1.05rem;font-weight:900}
+.tile small{font-size:.72rem;color:var(--sub)}
+.tile{--gc:var(--cobalt);border-color:color-mix(in srgb,var(--gc) 30%,var(--line));background:color-mix(in srgb,var(--gc) 8%,var(--bg))}
+.tile b{color:var(--gc)}
+.tile .acc{stroke:var(--gc)}
+.tile.sel{border-color:var(--gc);background:color-mix(in srgb,var(--gc) 22%,var(--bg));box-shadow:0 0 0 2px var(--gc)}
+.gh::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--gc);margin-right:6px;vertical-align:0}
+.adv{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px;display:grid;gap:10px}
+.adv summary{font-weight:900;cursor:pointer;padding:6px 0}
+.advrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.toggle.on{background:var(--cobalt);border-color:var(--cobalt);color:var(--cobalt-ink)}
+@media (max-width:360px){.grid{grid-template-columns:repeat(2,1fr)} .wrap{padding-left:10px;padding-right:10px} .step{width:52px;height:52px}}
+@media (min-width:900px){
+  .wrap{max-width:980px}
+  .beats{grid-template-columns:repeat(2,1fr)}
+  .dock .in{max-width:980px}
+  .grid{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-height:520px) and (orientation:landscape){
+  #bpmIn{font-size:2.6rem}
+  .tempo{gap:6px;padding:10px 14px}
+  .step{width:46px;height:46px;font-size:1.4rem}
+  .hint{display:none}
+  .tap{height:44px}
+  .tap small{display:none}
+  .play,.vol{height:48px}
+  .wrap{padding-bottom:96px}
+  .panel{max-height:94%}
+}
+@media (prefers-reduced-motion:reduce){.slot::after{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>リズム・メトロノーム</h1>
+
+  <section class="tempo" aria-label="テンポ">
+    <div class="tlabel">テンポ（BPM）</div>
+    <div class="bpmrow">
+      <button class="step" id="minus" aria-label="テンポを下げる">−</button>
+      <div class="bpmbox">
+        <input id="bpmIn" type="number" inputmode="decimal" step="0.1" min="30" max="300" aria-label="テンポを入力">
+        <div class="word" id="word"></div>
+        <div class="hint">数字をタップして直接入力</div>
+      </div>
+      <button class="step" id="plus" aria-label="テンポを上げる">＋</button>
+    </div>
+    <input type="range" id="bpmRange" min="30" max="300" aria-label="テンポ">
+    <button class="tap" id="tap">トントン<small>何回か叩いてテンポを決める</small></button>
+  </section>
+
+  <div class="secthead">
+    <h2>リズム</h2>
+    <div class="counter" aria-label="拍数">
+      <button id="bMinus" aria-label="拍を減らす">−</button>
+      <span id="bCount">4拍</span>
+      <button id="bPlus" aria-label="拍を増やす">＋</button>
+    </div>
+  </div>
+  <div class="score" aria-label="譜面"><svg id="barScore"></svg></div>
+  <div class="legend">
+    <span><i style="background:var(--ink)"></i>アクセント</span>
+    <span><i style="border:3px solid var(--ink)"></i>普通</span>
+    <span><i style="background:var(--rest);width:9px;height:9px"></i>休み</span>
+    <span>丸をタップで切り替え</span>
+  </div>
+  <div class="beats" id="beats"></div>
+
+  <section class="saved">
+    <h2>保存したリズム</h2>
+    <div class="saverow">
+      <input id="saveName" placeholder="名前（例：シャッフル練習）" maxlength="40" aria-label="保存名">
+      <button class="btn blue" id="saveBtn">保存</button>
+    </div>
+    <ul class="list" id="list"></ul>
+    <p class="empty" id="empty">まだありません。今のリズムに名前をつけて保存できます。</p>
+  </section>
+
+  <p class="note">
+    ・各拍の「変更」からリズムを選べます。分割数やタイは「詳細設定」で。<br>
+    ・伸ばしたい拍は「伸ばす」を選ぶと前の音とつながります。全音符は1拍目「タン」＋2〜4拍目「伸ばす」。<br>
+    ・iPhoneは消音モードだと鳴らないことがあります。スペースキーで再生／停止。
+  </p>
+</div>
+
+<div class="dock"><div class="in">
+  <button class="vol" id="vol">音量<br>大</button>
+  <button class="play" id="play">▶ 再生</button>
+</div></div>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="scrim" id="scrim"></div>
+  <div class="panel">
+    <div class="phead">
+      <h3 id="sheetTitle"></h3>
+      <button class="btn" id="closeSheet">閉じる</button>
+    </div>
+    <div class="grid" id="tiles"></div>
+    <details class="adv" id="adv">
+      <summary>詳細設定</summary>
+      <div class="advrow">
+        <span>分割数</span>
+        <div class="counter">
+          <button id="dMinus" aria-label="分割を減らす">−</button>
+          <span id="dCount"></span>
+          <button id="dPlus" aria-label="分割を増やす">＋</button>
+        </div>
+      </div>
+      <div class="advrow" id="tieRow">
+        <span>前の音とつなげる（タイ）</span>
+        <button class="btn toggle" id="tieTog" aria-pressed="false">つなげる</button>
+      </div>
+      <button class="btn" id="copyAll">このリズムを全拍にコピー</button>
+    </details>
+  </div>
+</div>
+<script>
+const PRESETS = [
+  {g:"基本", name:"タン",     sub:"4分音符",               div:1, s:[2]},
+  {g:"基本", name:"タタ",     sub:"8分音符×2",             div:2, s:[2,1]},
+  {g:"基本", name:"ウンタ",   sub:"8分休符＋8分",          div:2, s:[0,1]},
+  {g:"基本", name:"ウン",     sub:"4分休符",               div:1, s:[0]},
+  {g:"16分", name:"タカタカ", sub:"16分×4",                div:4, s:[2,1,1,1]},
+  {g:"16分", name:"タッカ",   sub:"付点8分＋16分",         div:4, s:[2,0,0,1]},
+  {g:"16分", name:"タータカ", sub:"8分＋16分×2",           div:4, s:[2,0,1,1]},
+  {g:"16分", name:"タカター", sub:"16分×2＋8分",           div:4, s:[2,1,1,0]},
+  {g:"16分", name:"タター",   sub:"16分＋付点8分",         div:4, s:[2,1,0,0]},
+  {g:"16分", name:"タカーカ", sub:"16分＋8分＋16分",       div:4, s:[2,1,0,1]},
+  {g:"16分", name:"ウンタカ", sub:"8分休符＋16分×2",       div:4, s:[0,0,1,1]},
+  {g:"16分", name:"ンタカタ", sub:"16分休符＋16分×3",      div:4, s:[0,1,1,1]},
+  {g:"16分", name:"ンタータ", sub:"16分休符＋8分＋16分",   div:4, s:[0,1,0,1]},
+  {g:"16分", name:"ウンッカ", sub:"付点8分休符＋16分",     div:4, s:[0,0,0,1]},
+  {g:"3連",  name:"タタタ",   sub:"3連符",                 div:3, s:[2,1,1]},
+  {g:"3連",  name:"タータ",   sub:"3連中抜き（スキップ）", div:3, s:[2,0,1]},
+  {g:"3連",  name:"タタア",   sub:"3連 8分＋4分",          div:3, s:[2,1,0]},
+  {g:"3連",  name:"ンタタ",   sub:"3連 休符＋8分×2",       div:3, s:[0,1,1]},
+  {g:"3連",  name:"ンンタ",   sub:"3連の3つ目だけ",        div:3, s:[0,0,1]},
+  {g:"連符", name:"5連",      sub:"5連符",                 div:5, s:[2,1,1,1,1]},
+  {g:"連符", name:"6連",      sub:"6連符",                 div:6, s:[2,1,1,1,1,1]},
+];
+const HOLD = {g:"基本", name:"伸ばす", sub:"前の拍とタイ", div:1, s:[0], tie:true};
+const clone = p => ({div:p.div, s:[...p.s], tie:!!p.tie});
+const store = {
+  get(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let state = store.get("rm-current") || { bpm:100, beats:[0,0,0,0].map(()=>clone(PRESETS[0])) };
+if(!state.beats || !state.beats.length) state.beats = [clone(PRESETS[0])];
+let saved = store.get("rm-saved") || [];
+const VOLS = [["大",1],["中",.55],["小",.25]];
+let volIdx = 0;
+const $ = id => document.getElementById(id);
+const persist = () => store.set("rm-current", state);
+
+function fixTies(){ state.beats.forEach((b,i)=>{ if(i===0 || b.s[0]!==0) b.tie=false; }); }
+function same(a,b){ return a.div===b.div && !!a.tie===!!b.tie && a.s.every((v,i)=>v===b.s[i]); }
+function nameOf(b){
+  if(same(b,HOLD)) return HOLD.name;
+  const p = PRESETS.find(p=>same(b,p));
+  return p ? p.name : "カスタム";
+}
+
+/* ---------- はやさ ---------- */
+function tempoWord(v){
+  if(v<70) return "🐢 ゆっくり";
+  if(v<110) return "🚶 ふつう";
+  if(v<160) return "🏃 速い";
+  return "🚀 とても速い";
+}
+function renderBpm(){
+  if(document.activeElement!==$("bpmIn")) $("bpmIn").value = state.bpm;
+  $("bpmRange").value = state.bpm;
+  $("word").textContent = tempoWord(state.bpm);
+  const v=state.bpm; $("word").style.setProperty("--wc", v<70?"var(--c3)":v<110?"var(--c4)":v<160?"var(--c2)":"var(--c1)");
+  $("bpmRange").style.accentColor = v<70?"var(--c3)":v<110?"var(--c4)":v<160?"var(--c2)":"var(--c1)";
+}
+function setBpm(v){
+  if(!isFinite(v)) { renderBpm(); return; }
+  state.bpm = Math.max(30, Math.min(300, Math.round(v*10)/10)); persist(); renderBpm();
+}
+$("bpmIn").addEventListener("change", e => { setBpm(parseFloat(e.target.value)); $("bpmIn").value = state.bpm; });
+$("bpmIn").addEventListener("keydown", e => { if(e.key==="Enter") e.target.blur(); });
+$("bpmIn").addEventListener("blur", () => { $("bpmIn").value = state.bpm; });
+$("bpmRange").oninput = e => setBpm(+e.target.value);
+function holdRepeat(el, fn){
+  let t1=null, t2=null;
+  const stop = () => { clearTimeout(t1); clearInterval(t2); };
+  el.addEventListener("pointerdown", e => { e.preventDefault(); fn(); t1=setTimeout(()=>{ t2=setInterval(fn,70); },400); });
+  ["pointerup","pointerleave","pointercancel"].forEach(ev=>el.addEventListener(ev,stop));
+  el.addEventListener("keydown", e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); fn(); } });
+}
+holdRepeat($("minus"), () => setBpm(Math.ceil(state.bpm)-1));
+holdRepeat($("plus"),  () => setBpm(Math.floor(state.bpm)+1));
+let taps=[];
+$("tap").onclick = () => {
+  const now = performance.now();
+  if(taps.length && now - taps.at(-1) > 2000) taps = [];
+  taps.push(now); taps = taps.slice(-8);
+  if(taps.length >= 2) setBpm(60000 * (taps.length-1) / (taps.at(-1) - taps[0]));
+  const t=$("tap"); t.classList.add("flash"); setTimeout(()=>t.classList.remove("flash"),90);
+};
+
+/* ---------- はく ---------- */
+let slotEls=[], beatEls=[];
+function renderBeats(){
+  fixTies();
+  $("bCount").textContent = state.beats.length + "拍";
+  const root = $("beats"); root.innerHTML = "";
+  state.beats.forEach((b, bi) => {
+    const fz = b.s.findIndex(v=>v!==0);
+    const lead = b.tie ? (fz<0 ? b.div : fz) : 0;
+    const el = document.createElement("div");
+    el.className = "beat"; el.style.setProperty("--bc", `var(--c${bi%6+1})`);
+    el.innerHTML = `
+      <div class="btop">
+        <span class="bnum" aria-hidden="true">${bi+1}</span>
+        <button class="pick" aria-label="${bi+1}拍目のリズムを変更（現在：${nameOf(b)}）"><span>${nameOf(b)}</span><small>変更 ▾</small></button>
+      </div>
+      <svg class="nota" aria-hidden="true"></svg>
+      <div class="slots">
+        ${b.s.map((v,si)=>`<button class="slot ${si<lead?"hold":"s"+v}" data-si="${si}" aria-label="${bi+1}拍目 ${si+1}つ目 ${si<lead?"伸ばし":["休み","普通","アクセント"][v]}"></button>`).join("")}
+      </div>`;
+    el.querySelector(".pick").onclick = e => openSheet(bi, e.currentTarget);
+    el.querySelectorAll(".slot").forEach(s => s.onclick = () => {
+      const si=+s.dataset.si; b.s[si] = (b.s[si]+2)%3; persist(); renderBeats();
+    });
+    root.appendChild(el);
+  });
+  beatEls = [...root.querySelectorAll(".beat")];
+  slotEls = beatEls.map(el => [...el.querySelectorAll(".slot")]);
+  renderNotation();
+}
+$("bMinus").onclick = () => { if(state.beats.length>1){ state.beats.pop(); persist(); renderBeats(); } };
+$("bPlus").onclick  = () => { if(state.beats.length<12){ state.beats.push(clone(PRESETS[0])); persist(); renderBeats(); } };
+
+/* ---------- えらぶ がめん ---------- */
+let sheetBi=0, sheetFrom=null;
+function tileSVG(p){
+  if(p.tie) return `<svg viewBox="0 0 100 76" aria-hidden="true">${tieArc(4,50)}<path d="M38,48 H70" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>`;
+  return `<svg viewBox="0 0 100 76" aria-hidden="true">${beatSVG(p,8,84,0).svg}</svg>`;
+}
+const GCOL = {"基本":"--c5","16分":"--c1","3連":"--c3","連符":"--c6"};
+function renderSheet(){
+  const b = state.beats[sheetBi];
+  $("sheetTitle").textContent = `${sheetBi+1}拍目のリズム`;
+  const list = sheetBi>0 ? [...PRESETS.slice(0,4), HOLD, ...PRESETS.slice(4)] : PRESETS;
+  let html="", lastG=null;
+  list.forEach((p,i)=>{
+    const gc = GCOL[p.g] || "--cobalt";
+    if(p.g!==lastG){ html+=`<h4 class="gh" style="--gc:var(${gc})">${p.g}</h4>`; lastG=p.g; }
+    html+=`<button style="--gc:var(${gc})" class="tile ${same(b,p)?"sel":""}" data-i="${i}" aria-pressed="${same(b,p)}">
+      ${tileSVG(p)}<b>${p.name}</b><small>${p.sub}</small></button>`;
+  });
+  $("tiles").innerHTML = html;
+  $("tiles").querySelectorAll(".tile").forEach(t => t.onclick = () => {
+    state.beats[sheetBi] = clone(list[+t.dataset.i]); persist(); renderBeats(); closeSheet();
+  });
+  $("dCount").textContent = b.div;
+  $("tieRow").style.display = sheetBi>0 ? "" : "none";
+  $("tieTog").classList.toggle("on", !!b.tie);
+  $("tieTog").setAttribute("aria-pressed", !!b.tie);
+}
+function openSheet(bi, from){
+  sheetBi=bi; sheetFrom=from; renderSheet();
+  $("sheet").classList.add("open");
+  const sel = $("tiles").querySelector(".sel") || $("tiles").querySelector(".tile");
+  sel && sel.focus();
+}
+function closeSheet(){
+  $("sheet").classList.remove("open");
+  if(sheetFrom && document.body.contains(sheetFrom)) sheetFrom.focus();
+  else { const p = beatEls[sheetBi] && beatEls[sheetBi].querySelector(".pick"); p && p.focus(); }
+}
+$("closeSheet").onclick = closeSheet;
+$("scrim").onclick = closeSheet;
+document.addEventListener("keydown", e => { if(e.key==="Escape" && $("sheet").classList.contains("open")) closeSheet(); });
+function changeDiv(delta){
+  const b = state.beats[sheetBi];
+  const d = Math.max(1, Math.min(8, b.div+delta));
+  if(d===b.div) return;
+  b.div = d; b.s = Array.from({length:d},(_,i)=> b.tie ? (i===0?0:1) : (i===0?2:1));
+  persist(); renderBeats(); renderSheet();
+}
+$("dMinus").onclick = () => changeDiv(-1);
+$("dPlus").onclick  = () => changeDiv(1);
+$("tieTog").onclick = () => {
+  const b = state.beats[sheetBi];
+  b.tie = !b.tie; if(b.tie && b.s[0]!==0) b.s[0]=0;
+  persist(); renderBeats(); renderSheet();
+};
+$("copyAll").onclick = () => {
+  const b = state.beats[sheetBi];
+  state.beats = state.beats.map(()=>clone(b)); persist(); renderBeats(); closeSheet();
+};
+
+/* ---------- おきにいり ---------- */
+function renderSaved(){
+  const ul=$("list"); ul.innerHTML="";
+  $("empty").style.display = saved.length ? "none" : "block";
+  saved.forEach((p,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<button class="btn load"></button><button class="btn">削除</button>`;
+    const lb=li.querySelector(".load"); lb.textContent=p.name;
+    const em=document.createElement("em"); em.textContent=`${p.bpm} BPM／${p.beats.length}拍`; lb.appendChild(em);
+    lb.onclick=()=>{ state={bpm:p.bpm, beats:p.beats.map(clone)}; persist(); renderBpm(); renderBeats(); window.scrollTo({top:0,behavior:"smooth"}); };
+    li.lastChild.onclick=()=>{ if(!confirm(`「${p.name}」を削除しますか？`)) return; saved.splice(i,1); store.set("rm-saved",saved); renderSaved(); };
+    ul.appendChild(li);
+  });
+}
+$("saveBtn").onclick=()=>{
+  const name=$("saveName").value.trim() || `リズム ${saved.length+1}`;
+  saved.unshift({name, bpm:state.bpm, beats:state.beats.map(clone)});
+  store.set("rm-saved",saved); $("saveName").value=""; renderSaved();
+};
+
+/* ---------- notation ---------- */
+const BF = {1:0,2:1,3:1,4:2,5:2,6:2,7:2,8:3};   // 1マスの旗の数
+const PARTS = [6,4,3,2,1];
+const TUPLET = [3,5,6,7];
+function beatEvents(b){
+  const d=b.div, s=b.s, ev=[]; let i=0;
+  while(i<d && s[i]===0) i++;
+  if(i>0) ev.push({rest:!b.tie, cont:!!b.tie, start:0, len:i});
+  while(i<d){ let j=i+1; while(j<d && s[j]===0) j++; ev.push({rest:false,start:i,len:j-i,lv:s[i]}); i=j; }
+  return ev;
+}
+function split4(L){ const out=[]; let r=L; while(r>0){ const p=[4,3,2,1].find(v=>v<=r); out.push(p); r-=p; } return out; }
+function split(L){ const out=[]; let r=L; while(r>0){ const p=PARTS.find(v=>v<=r); out.push(p); r-=p; } return out; }
+function shape(u,bf){ const dot=(u===3||u===6); const base=dot?u/3*2:u; return {flags:Math.max(0,bf-Math.log2(base)), dot}; }
+
+function beatSVG(b, x0, w, gap){
+  const d=b.div, bf=BF[d]??2, H=60, ST=26, ev=beatEvents(b);
+  const sw=(w-(d-1)*gap)/d;
+  const cx = i => x0 + i*(sw+gap) + sw/2;
+  const whole = ev.length===1;
+  const items=[];
+  ev.forEach(e=>{
+    if(whole){ items.push({rest:e.rest, cont:e.cont, x:cx(0), flags:0, dot:false, lv:e.lv}); return; }
+    let st=e.start; const parts=split(e.len);
+    parts.forEach((u,k)=>{
+      const sh=shape(u,bf);
+      items.push({rest:e.rest, cont:e.cont&&k===0, x:cx(st), flags:sh.flags, dot:sh.dot, lv:k===0?e.lv:0, tie:!e.rest && k<parts.length-1});
+      st+=u;
+    });
+  });
+  let o="";
+  // 音符と休符
+  items.forEach((it,idx)=>{
+    const x=it.x;
+    if(it.rest){
+      if(it.flags===0){
+        o+=`<path d="M${x-2},30 l5,7 l-5,6 l5,7 q-7,-2 -3,7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>`;
+      }else{
+        const top=34, xs=x+4;
+        o+=`<path d="M${xs},${top} L${xs-3-it.flags*1.5},${top+22+it.flags*4}" stroke="currentColor" stroke-width="2"/>`;
+        for(let k=0;k<it.flags;k++){
+          const yy=top+2+k*7, xx=xs-1.6*k-6;
+          o+=`<circle cx="${xx}" cy="${yy}" r="2.6" fill="currentColor"/><path d="M${xx},${yy+1.5} Q${xx+4},${yy+3} ${xs-1.6*k},${yy-1}" fill="none" stroke="currentColor" stroke-width="1.6"/>`;
+        }
+      }
+      if(it.dot) o+=`<circle cx="${x+10}" cy="40" r="1.9" fill="currentColor"/>`;
+      return;
+    }
+    o+=`<ellipse cx="${x}" cy="${H}" rx="6.2" ry="4.4" transform="rotate(-20 ${x} ${H})" fill="currentColor"/>`;
+    o+=`<line x1="${x+5.6}" y1="${H-1}" x2="${x+5.6}" y2="${ST}" stroke="currentColor" stroke-width="1.6"/>`;
+    if(it.dot) o+=`<circle cx="${x+12}" cy="${H-2}" r="1.9" fill="currentColor"/>`;
+    if(it.lv===2) o+=`<path class="acc" d="M${x-1},${ST-14} l8,3.5 l-8,3.5" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if(it.tie && items[idx+1]){
+      const nx=items[idx+1].x;
+      o+=`<path d="M${x+3},${H+7} Q${(x+nx)/2},${H+15} ${nx-3},${H+7}" fill="none" stroke="currentColor" stroke-width="1.6"/>`;
+    }
+  });
+  // 連桁・旗
+  const groups=[]; let g=[];
+  items.forEach(it=>{
+    if(!it.rest && it.flags>0) g.push(it); else { if(g.length) groups.push(g); g=[]; }
+  });
+  if(g.length) groups.push(g);
+  groups.forEach(gr=>{
+    if(gr.length===1){
+      const it=gr[0], sx=it.x+5.6;
+      for(let l=0;l<it.flags;l++) o+=`<path d="M${sx},${ST+l*6} q3,5 9,9 q2,3 0,9" fill="none" stroke="currentColor" stroke-width="2"/>`;
+      return;
+    }
+    const sxs=gr.map(it=>it.x+5.6);
+    o+=`<line x1="${sxs[0]}" y1="${ST+2}" x2="${sxs.at(-1)}" y2="${ST+2}" stroke="currentColor" stroke-width="4"/>`;
+    for(let l=2;l<=3;l++){
+      const y=ST+2+(l-1)*6;
+      gr.forEach((it,j)=>{
+        if(it.flags<l) return;
+        const nextOk = j+1<gr.length && gr[j+1].flags>=l;
+        const prevOk = j>0 && gr[j-1].flags>=l;
+        if(nextOk) o+=`<line x1="${sxs[j]}" y1="${y}" x2="${sxs[j+1]}" y2="${y}" stroke="currentColor" stroke-width="4"/>`;
+        else if(!prevOk){
+          const nb = j+1<gr.length ? sxs[j+1] : sxs[j-1];
+          const len = Math.min(9, Math.abs(nb-sxs[j])*0.4);
+          const to = j+1<gr.length ? sxs[j]+len : sxs[j]-len;
+          o+=`<line x1="${sxs[j]}" y1="${y}" x2="${to}" y2="${y}" stroke="currentColor" stroke-width="4"/>`;
+        }
+      });
+    }
+  });
+  // 連符の数字
+  if(!whole && TUPLET.includes(d)){
+    const a=cx(0)-4, z=cx(d-1)+10, m=(a+z)/2;
+    o+=`<path d="M${a},9 v-4 H${m-7} M${m+7},5 H${z} v4" fill="none" stroke="currentColor" stroke-width="1.3"/>`;
+    o+=`<text x="${m}" y="9" text-anchor="middle" font-size="11" font-family="Space Grotesk,sans-serif" font-weight="700" fill="currentColor">${d}</text>`;
+  }
+  return {svg:o, first:items[0], last:items.at(-1)};
+}
+
+const tieArc = (x1,x2) => `<path d="M${x1+3},67 Q${(x1+x2)/2},76 ${x2-3},67" fill="none" stroke="currentColor" stroke-width="1.6"/>`;
+function longNote(x, beats, acc){
+  const H=60, ST=26; let o="";
+  if(beats>=4){
+    o+=`<ellipse cx="${x}" cy="${H}" rx="7.4" ry="4.8" fill="none" stroke="currentColor" stroke-width="2.6"/>`;
+  }else{
+    o+= beats===1
+      ? `<ellipse cx="${x}" cy="${H}" rx="6.2" ry="4.4" transform="rotate(-20 ${x} ${H})" fill="currentColor"/>`
+      : `<ellipse cx="${x}" cy="${H}" rx="5.4" ry="3.6" transform="rotate(-20 ${x} ${H})" fill="none" stroke="currentColor" stroke-width="2.2"/>`;
+    o+=`<line x1="${x+5.6}" y1="${H-1}" x2="${x+5.6}" y2="${ST}" stroke="currentColor" stroke-width="1.6"/>`;
+    if(beats===3) o+=`<circle cx="${x+12}" cy="${H-2}" r="1.9" fill="currentColor"/>`;
+  }
+  if(acc) o+=`<path class="acc" d="M${x-1},${ST-14} l8,3.5 l-8,3.5" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return o;
+}
+const isFullHold = b => b && b.tie && b.s.every(v=>v===0);
+
+let barRects=[];
+function renderNotation(){
+  beatEls.forEach((el,bi)=>{
+    const svg=el.querySelector(".nota"); const w=svg.clientWidth||300;
+    svg.setAttribute("viewBox",`0 0 ${w} 76`);
+    const r=beatSVG(state.beats[bi],0,w,6);
+    let o=r.svg;
+    if(r.first && r.first.cont) o+=tieArc(Math.max(-6, r.first.x-46), r.first.x);
+    const nb=state.beats[bi+1];
+    if(nb && nb.tie && r.last && !r.last.rest) o+=tieArc(r.last.x, Math.min(w+6, r.last.x+46));
+    svg.innerHTML=o;
+  });
+  const bar=$("barScore"); const W=bar.clientWidth||600, n=state.beats.length, pad=6, RH=84;
+  const perRow = Math.max(1, Math.min(n, Math.floor((W-pad*2)/76)));
+  const rows = Math.ceil(n/perRow), bw=(W-pad*2)/perRow, bwi=bw-16;
+  bar.style.height = (RH*rows) + "px";
+  bar.setAttribute("viewBox",`0 0 ${W} ${RH*rows}`);
+  const col = k => k%perRow, rowOf = k => Math.floor(k/perRow);
+  const bx = k => pad+col(k)*bw+8;
+  const firstX = k => bx(k) + bwi/state.beats[k].div/2;
+  const isRestBeat = j => { const e=beatEvents(state.beats[j]); return e.length===1 && e[0].rest; };
+  const wrapC = (k,s) => `<g style="--bc:var(--c${k%6+1})">${s}</g>`;
+  let o="";
+  for(let k=0;k<n;k++) o+=`<rect class="bh" x="${pad+col(k)*bw+2}" y="${rowOf(k)*RH}" width="${bw-4}" height="${RH}" rx="8" style="fill:var(--c${k%6+1})"/>`;
+  for(let r=0;r<rows;r++){
+    const rs=r*perRow, re=Math.min(n,rs+perRow), xr=pad+(re-rs)*bw;
+    o+=`<g transform="translate(0,${r*RH+4})">`;
+    let prev=null, k=rs;
+    while(k<re){
+      const b=state.beats[k], ev=beatEvents(b);
+      if(isRestBeat(k)){
+        let m=1; while(k+m<re && isRestBeat(k+m)) m++;
+        if(m===n && n>=2){
+          const cxm=(pad+xr)/2;
+          o+=`<line x1="${cxm-14}" y1="40" x2="${cxm+14}" y2="40" stroke="currentColor" stroke-width="1.4"/><rect x="${cxm-8}" y="40" width="16" height="7" fill="currentColor"/>`;
+        }else{
+          let j=k;
+          while(j<k+m){
+            if(n%2===0 && j%2===0 && j+1<k+m){
+              const xh=(firstX(j)+firstX(j+1))/2;
+              o+=`<line x1="${xh-14}" y1="48" x2="${xh+14}" y2="48" stroke="currentColor" stroke-width="1.4"/><rect x="${xh-8}" y="41" width="16" height="7" fill="currentColor"/>`;
+              j+=2;
+            }else{ o+=beatSVG(state.beats[j],bx(j),bwi,0).svg; j++; }
+          }
+        }
+        prev=null; k+=m; continue;
+      }
+      if(ev.length===1 && !ev[0].rest){
+        let m=1; while(k+m<re && isFullHold(state.beats[k+m])) m++;
+        if(m>1){
+          if(ev[0].cont) o+=tieArc(prev!=null?prev:firstX(k)-40, firstX(k));
+          let off=0, last=null;
+          split4(m).forEach((u,pi)=>{
+            const x=firstX(k+off);
+            if(last!=null) o+=tieArc(last, x);
+            o+=wrapC(k, longNote(x, u, pi===0 && ev[0].lv===2));
+            last=x; off+=u;
+          });
+          prev=last; k+=m;
+          if(k===re && k<n && state.beats[k].tie) o+=tieArc(last, Math.min(xr+4,last+40));
+          continue;
+        }
+      }
+      const rr=beatSVG(b,bx(k),bwi,0);
+      o+=wrapC(k, rr.svg);
+      if(rr.first && rr.first.cont) o+=tieArc(prev!=null?prev:rr.first.x-40, rr.first.x);
+      prev = (rr.last && !rr.last.rest) ? rr.last.x : null;
+      k++;
+      if(k===re && k<n && state.beats[k].tie && prev!=null) o+=tieArc(prev, Math.min(xr+4,prev+40));
+    }
+    o+=`</g>`;
+    o+=`<line x1="${pad}" y1="${r*RH+14}" x2="${pad}" y2="${r*RH+74}" stroke="currentColor" stroke-width="1.2" opacity=".5"/>`;
+    o+=`<line x1="${xr}" y1="${r*RH+14}" x2="${xr}" y2="${r*RH+74}" stroke="currentColor" stroke-width="1.2" opacity=".5"/>`;
+  }
+  bar.innerHTML=o;
+  barRects=[...bar.querySelectorAll(".bh")];
+}
+let rzT=null;
+window.addEventListener("resize",()=>{ clearTimeout(rzT); rzT=setTimeout(renderNotation,120); });
+
+/* ---------- おと ---------- */
+let ctx=null, master=null, playing=false, timer=null, beatStart=0, beatDur=.6, bi=0, si=0, queue=[], lit=null;
+function click(t, level, isBar){
+  const o=ctx.createOscillator(), g=ctx.createGain();
+  o.type="triangle";
+  o.frequency.value = level===2 ? (isBar?1760:1320) : 880;
+  const peak = level===2 ? (isBar?1:.8) : .45;
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(peak,t+.002);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.045);
+  o.connect(g).connect(master); o.start(t); o.stop(t+.06);
+}
+function scheduler(){
+  const ahead = document.hidden ? 1.2 : .15;   // 裏に回ったときはタイマーが間引かれるので先読みを長くする
+  for(;;){
+    if(bi >= state.beats.length){ bi=0; si=0; }
+    const b = state.beats[bi];
+    if(si >= b.div){ si=0; bi=(bi+1)%state.beats.length; beatStart+=beatDur; beatDur=60/state.bpm; continue; }
+    const tt = beatStart + beatDur*si/b.div;     // 拍頭からの位置で計算して誤差をためない
+    if(tt >= ctx.currentTime + ahead) break;
+    const lv = b.s[si];
+    if(lv) click(tt, lv, bi===0 && si===0);
+    queue.push({t:tt, bi, si});
+    si++;
+  }
+}
+function heardTime(){
+  if(ctx.getOutputTimestamp){
+    const ts = ctx.getOutputTimestamp();
+    if(ts.contextTime > 0 && ts.performanceTime > 0) return ts.contextTime + (performance.now()-ts.performanceTime)/1000;
+  }
+  return ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);
+}
+function clearLit(){ if(lit){ ["s","b","r"].forEach(k=>lit[k]&&lit[k].classList.remove(k==="s"?"now":"cur")); } lit=null; }
+function draw(){
+  if(!playing) return;
+  let cur=null;
+  const now = heardTime();
+  while(queue.length && queue[0].t<=now) cur=queue.shift();
+  if(cur){
+    clearLit();
+    const s=slotEls[cur.bi]&&slotEls[cur.bi][cur.si], b=beatEls[cur.bi], r=barRects[cur.bi];
+    s&&s.classList.add("now"); b&&b.classList.add("cur"); r&&r.classList.add("cur");
+    lit={s,b,r};
+  }
+  requestAnimationFrame(draw);
+}
+function start(){
+  if(!ctx){
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value=VOLS[volIdx][1]; master.connect(ctx.destination);
+  }
+  ctx.resume();
+  bi=0; si=0; queue=[]; beatStart=ctx.currentTime+.1; beatDur=60/state.bpm; playing=true;
+  timer=setInterval(scheduler,25); scheduler(); requestAnimationFrame(draw);
+  $("play").textContent="■ 停止"; $("play").classList.add("on");
+}
+function stop(){
+  playing=false; clearInterval(timer); queue=[]; clearLit();
+  $("play").textContent="▶ 再生"; $("play").classList.remove("on");
+}
+$("play").onclick = () => playing ? stop() : start();
+$("vol").onclick = () => {
+  volIdx=(volIdx+1)%VOLS.length;
+  $("vol").innerHTML = "音量<br>"+VOLS[volIdx][0];
+  if(master) master.gain.value=VOLS[volIdx][1];
+};
+document.addEventListener("keydown", e => {
+  if(e.code==="Space" && !["INPUT","BUTTON","SUMMARY"].includes(document.activeElement.tagName) && !$("sheet").classList.contains("open")){
+    e.preventDefault(); playing?stop():start();
+  }
+});
+
+renderBpm(); renderBeats(); renderSaved();
+</script>
+</body>
+</html>
