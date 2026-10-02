@@ -58,6 +58,15 @@ input[type=range]{width:100%;accent-color:var(--cobalt);height:32px}
 .tap small{display:block;font-weight:500;font-size:.75rem;color:var(--sub)}
 .tap.flash{background:var(--c2);border-color:var(--c2);color:var(--cobalt-ink)}
 
+/* 音の設定 */
+.sound{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-top:6px solid var(--c4);border-radius:24px;padding:12px 16px;display:grid;gap:10px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.slabel{font-weight:900}
+.slabel small{display:block;font-weight:500;font-size:.75rem;color:var(--sub)}
+.seg{display:flex;background:var(--bg);border:2px solid var(--line);border-radius:14px;padding:3px;gap:3px}
+.seg button{min-width:58px;height:40px;border:none;border-radius:10px;background:transparent;font-weight:700}
+.seg button.on{background:var(--c4);color:var(--cobalt-ink)}
+
 /* こうせい */
 .secthead{display:flex;align-items:center;justify-content:space-between;margin:24px 2px 10px;gap:8px}
 .secthead h2{font-size:1.1rem;margin:0;font-weight:900}
@@ -181,6 +190,27 @@ input[type=range]{width:100%;accent-color:var(--cobalt);height:32px}
     <button class="tap" id="tap">トントン<small>何回か叩いてテンポを決める</small></button>
   </section>
 
+  <section class="sound" aria-label="音の設定">
+    <div class="srow">
+      <div class="slabel">ガイド<small>ずっと鳴る基準の音</small></div>
+      <div class="seg" id="segGuide" role="group" aria-label="ガイド">
+        <button data-v="0">なし</button><button data-v="1">4分</button><button data-v="2">8分</button>
+      </div>
+    </div>
+    <div class="srow">
+      <div class="slabel">ガイドの音量</div>
+      <div class="seg" id="segGvol" role="group" aria-label="ガイドの音量">
+        <button data-v="0">大</button><button data-v="1">中</button><button data-v="2">小</button>
+      </div>
+    </div>
+    <div class="srow">
+      <div class="slabel">リズムの音<small>ガイドとは違う音で鳴る</small></div>
+      <div class="seg" id="segRhythm" role="group" aria-label="リズムの音">
+        <button data-v="1">鳴らす</button><button data-v="0">消す</button>
+      </div>
+    </div>
+  </section>
+
   <div class="secthead">
     <h2>リズム</h2>
     <div class="counter" aria-label="拍数">
@@ -211,6 +241,7 @@ input[type=range]{width:100%;accent-color:var(--cobalt);height:32px}
   <p class="note">
     ・各拍の「変更」からリズムを選べます。分割数やタイは「詳細設定」で。<br>
     ・伸ばしたい拍は「伸ばす」を選ぶと前の音とつながります。全音符は1拍目「タン」＋2〜4拍目「伸ばす」。<br>
+    ・「ガイド」は4分か8分でずっと鳴る基準の音です。選んだリズムは別の音で鳴るので、聞き分けながら練習できます。<br>
     ・iPhoneは消音モードだと鳴らないことがあります。スペースキーで再生／停止。<br>
     ・保存したリズムは、この端末のブラウザにだけ残ります。サイトデータの消去などで消えることがあり、元には戻せません。
   </p>
@@ -280,6 +311,16 @@ const store = {
 let state = store.get("rm-current") || { bpm:100, beats:[0,0,0,0].map(()=>clone(PRESETS[0])) };
 if(!state.beats || !state.beats.length) state.beats = [clone(PRESETS[0])];
 let saved = store.get("rm-saved") || [];
+let snd = Object.assign({guide:1, gvol:1, rhythm:1}, store.get("rm-sound") || {});
+function renderSound(){
+  [["segGuide","guide"],["segGvol","gvol"],["segRhythm","rhythm"]].forEach(([id,key])=>{
+    $(id).querySelectorAll("button").forEach(b=>{
+      const on = +b.dataset.v===snd[key];
+      b.classList.toggle("on",on); b.setAttribute("aria-pressed",on);
+    });
+  });
+  $("segGvol").closest(".srow").style.opacity = snd.guide ? "" : ".45";
+}
 const VOLS = [["大",1],["中",.55],["小",.25]];
 let volIdx = 0;
 const $ = id => document.getElementById(id);
@@ -641,15 +682,43 @@ window.addEventListener("resize",()=>{ clearTimeout(rzT); rzT=setTimeout(renderN
 
 /* ---------- おと ---------- */
 let ctx=null, master=null, playing=false, timer=null, beatStart=0, beatDur=.6, bi=0, si=0, queue=[], lit=null;
+let bus=null, noiseBuf=null;
+const GVOL=[1,.55,.28];
+// リズム：音程のある「ピッ」
 function click(t, level, isBar){
+  if(!snd.rhythm) return;
   const o=ctx.createOscillator(), g=ctx.createGain();
-  o.type="triangle";
-  o.frequency.value = level===2 ? (isBar?1760:1320) : 880;
-  const peak = level===2 ? (isBar?1:.8) : .45;
+  o.type="sine";
+  o.frequency.value = level===2 ? (isBar?2093:1568) : 1175;
+  const peak = level===2 ? (isBar?.9:.75) : .45;
   g.gain.setValueAtTime(.0001,t);
-  g.gain.exponentialRampToValueAtTime(peak,t+.002);
-  g.gain.exponentialRampToValueAtTime(.0001,t+.045);
-  o.connect(g).connect(master); o.start(t); o.stop(t+.06);
+  g.gain.exponentialRampToValueAtTime(peak,t+.003);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.09);
+  o.connect(g).connect(bus); o.start(t); o.stop(t+.1);
+}
+// ガイド：木を叩いたような「コッ」
+function guideClick(t, strong){
+  if(!noiseBuf){
+    noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate*.04), ctx.sampleRate);
+    const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }
+  const n=ctx.createBufferSource(); n.buffer=noiseBuf;
+  const bp=ctx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value= strong?1400:1100; bp.Q.value=4;
+  const g=ctx.createGain(); const peak=(strong?1.6:1.1)*GVOL[snd.gvol];
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(peak,t+.001);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.03);
+  n.connect(bp).connect(g).connect(bus); n.start(t); n.stop(t+.04);
+  const o=ctx.createOscillator(), g2=ctx.createGain();
+  o.type="sine"; o.frequency.value= strong?520:420;
+  g2.gain.setValueAtTime(.0001,t);
+  g2.gain.exponentialRampToValueAtTime(.5*GVOL[snd.gvol],t+.002);
+  g2.gain.exponentialRampToValueAtTime(.0001,t+.04);
+  o.connect(g2).connect(bus); o.start(t); o.stop(t+.05);
+}
+function scheduleGuide(bstart, dur, isBarStart){
+  if(!snd.guide) return;
+  for(let k=0;k<snd.guide;k++) guideClick(bstart + dur*k/snd.guide, isBarStart && k===0);
 }
 function scheduler(){
   const ahead = document.hidden ? 1.2 : .15;   // 裏に回ったときはタイマーが間引かれるので先読みを長くする
@@ -660,6 +729,7 @@ function scheduler(){
     const tt = beatStart + beatDur*si/b.div;     // 拍頭からの位置で計算して誤差をためない
     if(tt >= ctx.currentTime + ahead) break;
     const lv = b.s[si];
+    if(si===0) scheduleGuide(beatStart, beatDur, bi===0);
     if(lv) click(tt, lv, bi===0 && si===0);
     queue.push({t:tt, bi, si});
     si++;
@@ -692,12 +762,14 @@ function start(){
     master = ctx.createGain(); master.gain.value=VOLS[volIdx][1]; master.connect(ctx.destination);
   }
   ctx.resume();
+  bus = ctx.createGain(); bus.connect(master);
   bi=0; si=0; queue=[]; beatStart=ctx.currentTime+.1; beatDur=60/state.bpm; playing=true;
   timer=setInterval(scheduler,25); scheduler(); requestAnimationFrame(draw);
   $("play").textContent="■ 停止"; $("play").classList.add("on");
 }
 function stop(){
   playing=false; clearInterval(timer); queue=[]; clearLit();
+  if(bus){ try{ bus.disconnect(); }catch(e){} bus=null; }
   $("play").textContent="▶ 再生"; $("play").classList.remove("on");
 }
 $("play").onclick = () => playing ? stop() : start();
@@ -712,7 +784,13 @@ document.addEventListener("keydown", e => {
   }
 });
 
-renderBpm(); renderBeats(); renderSaved();
+[["segGuide","guide"],["segGvol","gvol"],["segRhythm","rhythm"]].forEach(([id,key])=>{
+  $(id).addEventListener("click", e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    snd[key]=+b.dataset.v; store.set("rm-sound",snd); renderSound();
+  });
+});
+renderBpm(); renderBeats(); renderSaved(); renderSound();
 </script>
 </body>
 </html>
